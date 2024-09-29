@@ -31,6 +31,12 @@ type WeatherTemperature struct {
 	}
 }
 
+type Temperature struct {
+	TempC float64 `json:"temp_C"`
+	TempF float64 `json:"temp_F"`
+	TempK float64 `json:"temp_K"`
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -108,6 +114,19 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dataTemperature := Temperature{}
+	dataTemperature.TempC = dataWeather.Current.TempC
+	dataTemperature.ConverteCelsiusFarenheit(dataWeather.Current.TempC)
+	dataTemperature.ConverteCelsiusKelvin(dataWeather.Current.TempC)
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(dataWeather)
+	json.NewEncoder(w).Encode(dataTemperature)
+}
+
+func (t *Temperature) ConverteCelsiusFarenheit(grauCelsius float64) {
+	t.TempF = grauCelsius*1.8 + 32
+}
+
+func (t *Temperature) ConverteCelsiusKelvin(grauCelsius float64) {
+	t.TempK = grauCelsius + 273
 }
