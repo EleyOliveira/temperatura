@@ -22,6 +22,15 @@ type ViaCEP struct {
 	Erro        string `json:"erro"`
 }
 
+type WeatherTemperature struct {
+	Location struct {
+		Name string `json:"name"`
+	}
+	Current struct {
+		TempC float64 `json:"temp_c"`
+	}
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -47,7 +56,7 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 	req, err := http.Get("https://viacep.com.br/ws/" + cep + "/json/")
 	if err != nil {
 		w.WriteHeader(req.StatusCode)
-		fmt.Fprintf(w, "Erro ao fazer requisição: %s", err)
+		fmt.Fprintf(w, "Erro ao fazer requisição do Cep: %s", err)
 		return
 	}
 	defer req.Body.Close()
@@ -55,7 +64,7 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 	res, err := io.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Erro ao ler resposta: %s", err)
+		fmt.Fprintf(w, "Erro ao ler resposta do cep: %s", err)
 		return
 	}
 
@@ -73,6 +82,32 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	apiKey := "90afc375b7bf4a7cb18171824242909"
+	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, data.Localidade)
+
+	req, err = http.Get(url)
+	if err != nil {
+		w.WriteHeader(req.StatusCode)
+		fmt.Fprintf(w, "Erro ao fazer requisição da temperatura: %s", err)
+		return
+	}
+	defer req.Body.Close()
+
+	res, err = io.ReadAll(req.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Erro ao ler resposta da temperatura: %s", err)
+		return
+	}
+
+	var dataWeather WeatherTemperature
+	err = json.Unmarshal(res, &dataWeather)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Erro ao formatar a resposta da temperatura: %s", err)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
+	json.NewEncoder(w).Encode(dataWeather)
 }
