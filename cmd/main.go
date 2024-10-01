@@ -130,3 +130,5 @@ func (t *Temperature) ConverteCelsiusFarenheit(grauCelsius float64) {
 func (t *Temperature) ConverteCelsiusKelvin(grauCelsius float64) {
 	t.TempK = grauCelsius + 273
 }
+
+//implementar testes automatizados
