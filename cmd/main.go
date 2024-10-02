@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,7 +38,13 @@ type Temperature struct {
 	TempK float64 `json:"temp_K"`
 }
 
+var regex *regexp.Regexp
+
 func main() {
+
+	// expressão regex para validar se o cep informado possui apenas número e tem 8 dígitos
+	regex = regexp.MustCompile(`^\d{8}$`)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Informe um cep para saber a temperatura no local")
@@ -50,14 +57,18 @@ func main() {
 func cepHandler(w http.ResponseWriter, r *http.Request) {
 	cep := r.URL.Query().Get("cep")
 
-	//expressão regex para validar se o cep informado possui apenas número e tem 8 dígitos
-	regex := regexp.MustCompile(`^\d{8}$`)
+	codigo, err := ValidarCep(cep)
+	if err != nil {
+		w.WriteHeader(codigo)
+		fmt.Fprintf(w, err.Error())
+		return
+	}
 
-	if !regex.MatchString(cep) {
+	/*if !regex.MatchString(cep) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		fmt.Fprintf(w, "invalid zipcode")
 		return
-	}
+	}*/
 
 	req, err := http.Get("https://viacep.com.br/ws/" + cep + "/json/")
 	if err != nil {
@@ -131,4 +142,9 @@ func (t *Temperature) ConverteCelsiusKelvin(grauCelsius float64) {
 	t.TempK = grauCelsius + 273
 }
 
-//implementar testes automatizados
+func ValidarCep(cep string) (int, error) {
+	if !regex.MatchString(cep) {
+		return http.StatusUnprocessableEntity, errors.New("invalid zipcode")
+	}
+	return 0, nil
+}
