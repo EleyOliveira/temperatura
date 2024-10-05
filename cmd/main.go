@@ -42,9 +42,6 @@ var regex *regexp.Regexp
 
 func main() {
 
-	// expressão regex para validar se o cep informado possui apenas número e tem 8 dígitos
-	regex = regexp.MustCompile(`^\d{8}$`)
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Informe um cep para saber a temperatura no local")
@@ -143,6 +140,11 @@ func (t *Temperature) ConverteCelsiusKelvin(grauCelsius float64) {
 }
 
 func ValidarCep(cep string) (int, error) {
+
+	if regex == nil {
+		regex = regexp.MustCompile(`^\d{8}$`)
+	}
+
 	if !regex.MatchString(cep) {
 		return http.StatusUnprocessableEntity, errors.New("invalid zipcode")
 	}
