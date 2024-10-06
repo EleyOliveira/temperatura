@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/jarcoal/httpmock"
 )
 
 var testTemperature = Temperature{}
@@ -72,5 +75,69 @@ func TestValidarCep(t *testing.T) {
 	if err != nil {
 		t.Errorf("Esperado nil como retorno do erro para o cenario %s mas foi retornado %s", cenarioOk.descricao,
 			err.Error())
+	}
+}
+
+func TestCepHandler(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	cep := "06666999"
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
+		func(req *http.Request) (*http.Response, error) {
+			viaCepResponse := &ViaCEP{
+				Cep:         "06666999",
+				Logradouro:  "Rua Teste",
+				Complemento: "Complemento teste",
+				Bairro:      "Bairro Teste",
+				Localidade:  "Localidade Teste",
+				Uf:          "TE",
+				Ibge:        "22222",
+				Gia:         "2354454",
+				Ddd:         "99",
+				Siafi:       "2564",
+			}
+			resp, _ := httpmock.NewJsonResponse(200, viaCepResponse)
+
+			return resp, nil
+		})
+
+	_, codigo, _ := GetCep(cep)
+
+	if codigo != 200 {
+		t.Errorf("Esperado status code igual a 200, porém foi retornado %d", codigo)
+	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
+		func(req *http.Request) (*http.Response, error) {
+			viaCepResponse := &ViaCEP{
+				Cep:         "06666999",
+				Logradouro:  "Rua Teste",
+				Complemento: "Complemento teste",
+				Bairro:      "Bairro Teste",
+				Localidade:  "Localidade Teste",
+				Uf:          "TE",
+				Ibge:        "22222",
+				Gia:         "2354454",
+				Ddd:         "99",
+				Siafi:       "2564",
+				Erro:        "true",
+			}
+			resp, _ := httpmock.NewJsonResponse(404, viaCepResponse)
+
+			return resp, nil
+		})
+
+	_, codigo, err := GetCep(cep)
+	expectedCode := http.StatusNotFound
+	expectedMessage := "can not find zipcode"
+
+	if codigo != expectedCode {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if expectedMessage != err.Error() {
+		t.Errorf("Esperado mensagem %s, porém foi retornado %s", expectedMessage, err.Error())
 	}
 }

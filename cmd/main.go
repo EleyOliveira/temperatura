@@ -61,45 +61,16 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*if !regex.MatchString(cep) {
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		fmt.Fprintf(w, "invalid zipcode")
-		return
-	}*/
-
-	req, err := http.Get("https://viacep.com.br/ws/" + cep + "/json/")
+	data, codigo, err := GetCep(cep)
 	if err != nil {
-		w.WriteHeader(req.StatusCode)
-		fmt.Fprintf(w, "Erro ao fazer requisição do Cep: %s", err)
-		return
-	}
-	defer req.Body.Close()
-
-	res, err := io.ReadAll(req.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Erro ao ler resposta do cep: %s", err)
-		return
-	}
-
-	var data ViaCEP
-	err = json.Unmarshal(res, &data)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Erro ao formatar a resposta: %s", err)
-		return
-	}
-
-	if data.Erro == "true" {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "can not find zipcode")
-		return
+		w.WriteHeader(codigo)
+		fmt.Fprintf(w, err.Error())
 	}
 
 	apiKey := "90afc375b7bf4a7cb18171824242909"
 	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, data.Localidade)
 
-	req, err = http.Get(url)
+	req, err := http.Get(url)
 	if err != nil {
 		w.WriteHeader(req.StatusCode)
 		fmt.Fprintf(w, "Erro ao fazer requisição da temperatura: %s", err)
@@ -107,7 +78,7 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer req.Body.Close()
 
-	res, err = io.ReadAll(req.Body)
+	res, err := io.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Erro ao ler resposta da temperatura: %s", err)
@@ -149,4 +120,31 @@ func ValidarCep(cep string) (int, error) {
 		return http.StatusUnprocessableEntity, errors.New("invalid zipcode")
 	}
 	return 0, nil
+}
+
+func GetCep(cep string) (*ViaCEP, int, error) {
+
+	req, err := http.Get("https://viacep.com.br/ws/" + cep + "/json/")
+	if err != nil {
+		return nil, req.StatusCode, fmt.Errorf("erro ao fazer requisição do Cep: %s", err)
+	}
+	defer req.Body.Close()
+
+	res, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao ler resposta do cep: %s", err)
+	}
+
+	var data ViaCEP
+	err = json.Unmarshal(res, &data)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao formatar a resposta: %s", err)
+	}
+
+	if data.Erro == "true" {
+		return nil, http.StatusNotFound, errors.New("can not find zipcode")
+	}
+
+	return &data, http.StatusOK, nil
+
 }
