@@ -2,13 +2,17 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
 )
 
 var testTemperature = Temperature{}
+
+type errorReader struct{}
 
 func TestConverteCelsiusFarenheit(t *testing.T) {
 	celsius := 27.6
@@ -140,4 +144,63 @@ func TestCepHandler(t *testing.T) {
 	if expectedMessage != err.Error() {
 		t.Errorf("Esperado mensagem %s, porém foi retornado %s", expectedMessage, err.Error())
 	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(500, "")
+			return resp, nil
+		})
+
+	_, codigo, err = GetCep(cep)
+	expectedCode = http.StatusInternalServerError
+	expectedMessage = "erro ao formatar a resposta"
+
+	if codigo != expectedCode {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if !strings.Contains(err.Error(), expectedMessage) {
+		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
+	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
+		httpmock.NewErrorResponder(fmt.Errorf("simulated network error")))
+
+	_, codigo, err = GetCep(cep)
+
+	expectedCode = 0
+	expectedMessage = "erro ao fazer requisição da api de CEP:"
+
+	if expectedCode != codigo {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if !strings.Contains(err.Error(), expectedMessage) {
+		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
+	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
+		func(req *http.Request) (*http.Response, error) {
+			resp := httpmock.NewStringResponse(200, "")
+			resp.Body = io.NopCloser(&errorReader{})
+			return resp, nil
+		})
+
+	_, codigo, err = GetCep(cep)
+
+	expectedCode = 500
+	expectedMessage = "erro ao ler resposta do CEP:"
+
+	if expectedCode != codigo {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if !strings.Contains(err.Error(), expectedMessage) {
+		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
+	}
+
+}
+
+func (e *errorReader) Read(p []byte) (n int, err error) {
+	return 0, fmt.Errorf("simulated read error")
 }

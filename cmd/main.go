@@ -126,13 +126,13 @@ func GetCep(cep string) (*ViaCEP, int, error) {
 
 	req, err := http.Get("https://viacep.com.br/ws/" + cep + "/json/")
 	if err != nil {
-		return nil, req.StatusCode, fmt.Errorf("erro ao fazer requisição do Cep: %s", err)
+		return nil, 0, fmt.Errorf("erro ao fazer requisição da api de CEP: %s", err)
 	}
 	defer req.Body.Close()
 
 	res, err := io.ReadAll(req.Body)
 	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao ler resposta do cep: %s", err)
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao ler resposta do CEP: %s", err)
 	}
 
 	var data ViaCEP
