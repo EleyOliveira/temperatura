@@ -67,36 +67,11 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, err.Error())
 	}
 
-	apiKey := "90afc375b7bf4a7cb18171824242909"
-	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, data.Localidade)
-
-	req, err := http.Get(url)
+	dataTemperature, codigo, err := GetTemperature(data.Localidade)
 	if err != nil {
-		w.WriteHeader(req.StatusCode)
-		fmt.Fprintf(w, "Erro ao fazer requisição da temperatura: %s", err)
-		return
+		w.WriteHeader(codigo)
+		fmt.Fprintf(w, err.Error())
 	}
-	defer req.Body.Close()
-
-	res, err := io.ReadAll(req.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Erro ao ler resposta da temperatura: %s", err)
-		return
-	}
-
-	var dataWeather WeatherTemperature
-	err = json.Unmarshal(res, &dataWeather)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Erro ao formatar a resposta da temperatura: %s", err)
-		return
-	}
-
-	dataTemperature := Temperature{}
-	dataTemperature.TempC = dataWeather.Current.TempC
-	dataTemperature.ConverteCelsiusFarenheit(dataWeather.Current.TempC)
-	dataTemperature.ConverteCelsiusKelvin(dataWeather.Current.TempC)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(dataTemperature)
@@ -146,5 +121,35 @@ func GetCep(cep string) (*ViaCEP, int, error) {
 	}
 
 	return &data, http.StatusOK, nil
+}
+
+func GetTemperature(localidade string) (*Temperature, int, error) {
+
+	apiKey := "90afc375b7bf4a7cb18171824242909"
+	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade)
+
+	req, err := http.Get(url)
+	if err != nil {
+		return nil, 0, fmt.Errorf("erro ao fazer requisição da api de temperatura: %s", err)
+	}
+	defer req.Body.Close()
+
+	res, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao ler resposta da temperatura: %s", err)
+	}
+
+	var dataWeather WeatherTemperature
+	err = json.Unmarshal(res, &dataWeather)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao formatar a resposta da temperatura: %s", err)
+	}
+
+	dataTemperature := Temperature{}
+	dataTemperature.TempC = dataWeather.Current.TempC
+	dataTemperature.ConverteCelsiusFarenheit(dataWeather.Current.TempC)
+	dataTemperature.ConverteCelsiusKelvin(dataWeather.Current.TempC)
+
+	return &dataTemperature, http.StatusOK, nil
 
 }

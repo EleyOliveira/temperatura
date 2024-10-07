@@ -82,7 +82,7 @@ func TestValidarCep(t *testing.T) {
 	}
 }
 
-func TestCepHandler(t *testing.T) {
+func TestGetCep(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -199,6 +199,94 @@ func TestCepHandler(t *testing.T) {
 		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
 	}
 
+}
+
+func TestGetTemperature(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	localidade := "Local Teste"
+	apiKey := "90afc375b7bf4a7cb18171824242909"
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+		func(req *http.Request) (*http.Response, error) {
+			weather := WeatherTemperature{
+				Location: struct {
+					Name string `json:"name"`
+				}{
+					Name: "São Paulo",
+				},
+				Current: struct {
+					TempC float64 `json:"temp_c"`
+				}{
+					TempC: 25.5,
+				},
+			}
+			resp, _ := httpmock.NewJsonResponse(200, weather)
+
+			return resp, nil
+		},
+	)
+
+	_, codigo, _ := GetTemperature(localidade)
+
+	if codigo != 200 {
+		t.Errorf("Esperado status code igual a 200, porém foi retornado %d", codigo)
+	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+		httpmock.NewErrorResponder(fmt.Errorf("simulated network error")))
+
+	_, codigo, err := GetTemperature(localidade)
+
+	expectedCode := 0
+	expectedMessage := "erro ao fazer requisição da api de temperatura:"
+
+	if expectedCode != codigo {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if !strings.Contains(err.Error(), expectedMessage) {
+		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
+	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+		func(req *http.Request) (*http.Response, error) {
+			resp := httpmock.NewStringResponse(200, "")
+			resp.Body = io.NopCloser(&errorReader{})
+			return resp, nil
+		})
+
+	_, codigo, err = GetTemperature(localidade)
+
+	expectedCode = 500
+	expectedMessage = "erro ao ler resposta da temperatura:"
+
+	if expectedCode != codigo {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if !strings.Contains(err.Error(), expectedMessage) {
+		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
+	}
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(500, "")
+			return resp, nil
+		})
+
+	_, codigo, err = GetTemperature(localidade)
+	expectedCode = http.StatusInternalServerError
+	expectedMessage = "erro ao formatar a resposta"
+
+	if codigo != expectedCode {
+		t.Errorf("Esperado status code %d, porém foi retornado %d", expectedCode, codigo)
+	}
+
+	if !strings.Contains(err.Error(), expectedMessage) {
+		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
+	}
 }
 
 func (e *errorReader) Read(p []byte) (n int, err error) {
