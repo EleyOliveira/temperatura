@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -91,16 +92,7 @@ func TestGetCep(t *testing.T) {
 	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
 		func(req *http.Request) (*http.Response, error) {
 			viaCepResponse := &ViaCEP{
-				Cep:         "06666999",
-				Logradouro:  "Rua Teste",
-				Complemento: "Complemento teste",
-				Bairro:      "Bairro Teste",
-				Localidade:  "Localidade Teste",
-				Uf:          "TE",
-				Ibge:        "22222",
-				Gia:         "2354454",
-				Ddd:         "99",
-				Siafi:       "2564",
+				Localidade: "Localidade Teste",
 			}
 			resp, _ := httpmock.NewJsonResponse(200, viaCepResponse)
 
@@ -116,17 +108,8 @@ func TestGetCep(t *testing.T) {
 	httpmock.RegisterResponder("GET", fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep),
 		func(req *http.Request) (*http.Response, error) {
 			viaCepResponse := &ViaCEP{
-				Cep:         "06666999",
-				Logradouro:  "Rua Teste",
-				Complemento: "Complemento teste",
-				Bairro:      "Bairro Teste",
-				Localidade:  "Localidade Teste",
-				Uf:          "TE",
-				Ibge:        "22222",
-				Gia:         "2354454",
-				Ddd:         "99",
-				Siafi:       "2564",
-				Erro:        "true",
+				Localidade: "Localidade Teste",
+				Erro:       "true",
 			}
 			resp, _ := httpmock.NewJsonResponse(404, viaCepResponse)
 
@@ -207,8 +190,10 @@ func TestGetTemperature(t *testing.T) {
 
 	localidade := "Local Teste"
 	apiKey := "90afc375b7bf4a7cb18171824242909"
+	params := url.Values{}
+	params.Add("q", localidade)
 
-	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&%s", apiKey, params.Encode()),
 		func(req *http.Request) (*http.Response, error) {
 			weather := WeatherTemperature{
 				Location: struct {
@@ -234,7 +219,7 @@ func TestGetTemperature(t *testing.T) {
 		t.Errorf("Esperado status code igual a 200, porém foi retornado %d", codigo)
 	}
 
-	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&%s", apiKey, params.Encode()),
 		httpmock.NewErrorResponder(fmt.Errorf("simulated network error")))
 
 	_, codigo, err := GetTemperature(localidade)
@@ -250,7 +235,7 @@ func TestGetTemperature(t *testing.T) {
 		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
 	}
 
-	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&%s", apiKey, params.Encode()),
 		func(req *http.Request) (*http.Response, error) {
 			resp := httpmock.NewStringResponse(200, "")
 			resp.Body = io.NopCloser(&errorReader{})
@@ -270,7 +255,7 @@ func TestGetTemperature(t *testing.T) {
 		t.Errorf("A mensagem %s não contém o texto %s", err.Error(), expectedMessage)
 	}
 
-	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade),
+	httpmock.RegisterResponder("GET", fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&%s", apiKey, params.Encode()),
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(500, "")
 			return resp, nil

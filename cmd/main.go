@@ -6,21 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 )
 
 type ViaCEP struct {
-	Cep         string `json:"cep"`
-	Logradouro  string `json:"logradouro"`
-	Complemento string `json:"complemento"`
-	Bairro      string `json:"bairro"`
-	Localidade  string `json:"localidade"`
-	Uf          string `json:"uf"`
-	Ibge        string `json:"ibge"`
-	Gia         string `json:"gia"`
-	Ddd         string `json:"ddd"`
-	Siafi       string `json:"siafi"`
-	Erro        string `json:"erro"`
+	Localidade string `json:"localidade"`
+	Erro       string `json:"erro"`
 }
 
 type WeatherTemperature struct {
@@ -44,7 +36,7 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Informe um cep para saber a temperatura no local")
+		fmt.Fprintf(w, "Informe um cep para saber a temperatura no local, exemplo http://localhost:8000/cep?cep=11700000")
 	})
 	http.HandleFunc("/cep", cepHandler)
 	fmt.Println("Servidor iniciado na porta 8000")
@@ -57,20 +49,22 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 	codigo, err := ValidarCep(cep)
 	if err != nil {
 		w.WriteHeader(codigo)
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprintf(w, "ocorreu o erro: %s", err.Error())
 		return
 	}
 
 	data, codigo, err := GetCep(cep)
 	if err != nil {
 		w.WriteHeader(codigo)
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprintf(w, "ocorreu o erro: %s", err.Error())
+		return
 	}
 
 	dataTemperature, codigo, err := GetTemperature(data.Localidade)
 	if err != nil {
 		w.WriteHeader(codigo)
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprintf(w, "ocorreu o erro: %s", err.Error())
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -126,7 +120,9 @@ func GetCep(cep string) (*ViaCEP, int, error) {
 func GetTemperature(localidade string) (*Temperature, int, error) {
 
 	apiKey := "90afc375b7bf4a7cb18171824242909"
-	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, localidade)
+	params := url.Values{}
+	params.Add("q", localidade)
+	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&%s", apiKey, params.Encode())
 
 	req, err := http.Get(url)
 	if err != nil {
