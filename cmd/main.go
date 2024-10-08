@@ -26,7 +26,7 @@ type WeatherTemperature struct {
 
 type Temperature struct {
 	TempC float64 `json:"temp_C"`
-	TempF float64 `json:"temp_F"`
+	TempF string  `json:"temp_F"`
 	TempK float64 `json:"temp_K"`
 }
 
@@ -72,7 +72,7 @@ func cepHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Temperature) ConverteCelsiusFarenheit(grauCelsius float64) {
-	t.TempF = grauCelsius*1.8 + 32
+	t.TempF = fmt.Sprintf("%.1f", grauCelsius*1.8+32)
 }
 
 func (t *Temperature) ConverteCelsiusKelvin(grauCelsius float64) {

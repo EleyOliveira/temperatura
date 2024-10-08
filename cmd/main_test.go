@@ -17,12 +17,12 @@ type errorReader struct{}
 
 func TestConverteCelsiusFarenheit(t *testing.T) {
 	celsius := 27.6
-	expected := 81.68
+	expected := "81.7"
 
 	testTemperature.ConverteCelsiusFarenheit(celsius)
 
 	if testTemperature.TempF != expected {
-		t.Errorf("Esperado %f mas o resultado foi %f", expected, testTemperature.TempF)
+		t.Errorf("Esperado %s mas o resultado foi %s", expected, testTemperature.TempF)
 	}
 
 }
