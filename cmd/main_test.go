@@ -151,7 +151,7 @@ func TestGetCep(t *testing.T) {
 
 	_, codigo, err = GetCep(cep)
 
-	expectedCode = 0
+	expectedCode = 500
 	expectedMessage = "erro ao fazer requisição da api de CEP:"
 
 	if expectedCode != codigo {
@@ -224,7 +224,7 @@ func TestGetTemperature(t *testing.T) {
 
 	_, codigo, err := GetTemperature(localidade)
 
-	expectedCode := 0
+	expectedCode := 500
 	expectedMessage := "erro ao fazer requisição da api de temperatura:"
 
 	if expectedCode != codigo {

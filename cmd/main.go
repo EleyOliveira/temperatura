@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,9 +35,12 @@ var regex *regexp.Regexp
 
 func main() {
 
+	// Desabilitar a verificação do certificado SSL
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Informe um cep para saber a temperatura no local, exemplo http://localhost:8000/cep?cep=11700000")
+		fmt.Fprintf(w, "Informe um cep para saber a temperatura no local, exemplo https://temperatura-l5x7giwwma-uc.a.run.app/cep?cep=11700860")
 	})
 	http.HandleFunc("/cep", cepHandler)
 	fmt.Println("Servidor iniciado na porta 8000")
@@ -95,7 +99,7 @@ func GetCep(cep string) (*ViaCEP, int, error) {
 
 	req, err := http.Get("https://viacep.com.br/ws/" + cep + "/json/")
 	if err != nil {
-		return nil, 0, fmt.Errorf("erro ao fazer requisição da api de CEP: %s", err)
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao fazer requisição da api de CEP: %s", err)
 	}
 	defer req.Body.Close()
 
@@ -126,7 +130,7 @@ func GetTemperature(localidade string) (*Temperature, int, error) {
 
 	req, err := http.Get(url)
 	if err != nil {
-		return nil, 0, fmt.Errorf("erro ao fazer requisição da api de temperatura: %s", err)
+		return nil, http.StatusInternalServerError, fmt.Errorf("erro ao fazer requisição da api de temperatura: %s", err)
 	}
 	defer req.Body.Close()
 
