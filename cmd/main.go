@@ -26,6 +26,7 @@ type WeatherTemperature struct {
 }
 
 type Temperature struct {
+	City  string  `json:"city"`
 	TempC float64 `json:"temp_C"`
 	TempF string  `json:"temp_F"`
 	TempK float64 `json:"temp_K"`
@@ -146,6 +147,7 @@ func GetTemperature(localidade string) (*Temperature, int, error) {
 	}
 
 	dataTemperature := Temperature{}
+	dataTemperature.City = dataWeather.Location.Name
 	dataTemperature.TempC = dataWeather.Current.TempC
 	dataTemperature.ConverteCelsiusFarenheit(dataWeather.Current.TempC)
 	dataTemperature.ConverteCelsiusKelvin(dataWeather.Current.TempC)
